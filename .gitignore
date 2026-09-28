@@ -12,4 +12,6 @@ data/postgres/*
 !data/postgres/.gitkeep
 data/uploads/*
 !data/uploads/.gitkeep
+data/pgadmin/*
+!data/pgadmin/.gitkeep
 # apps/web/next-env.d.ts

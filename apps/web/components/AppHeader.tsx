@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Button, Chip, IconButton, Typography } from "@mui/material";
-import { LogOut, Menu, ShieldCheck } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getHealth } from "@/services/api";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -36,7 +36,12 @@ export default function AppHeader({ onMenu }: { onMenu: () => void }) {
       >
         <Menu size={21} />
       </IconButton>
-      <ShieldCheck size={24} color="#0B6B74" />
+      <Box
+        component="img"
+        src="/logo.png"
+        alt="Pharmacy Intelligence"
+        sx={{ width: 34, height: 34, objectFit: "contain" }}
+      />
       <Typography fontWeight={750} sx={{ flex: 1 }}>
         Pharmacy Intelligence
       </Typography>

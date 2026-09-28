@@ -53,6 +53,19 @@ export default function LoginPage() {
     >
       <Card sx={{ width: "min(100%, 440px)" }}>
         <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          <Box
+            component="img"
+            src="/logo.png"
+            alt="Pharmacy Intelligence"
+            sx={{
+              width: 72,
+              height: 72,
+              objectFit: "contain",
+              display: "block",
+              mx: "auto",
+              mb: 2,
+            }}
+          />
           <Typography variant="h1" sx={{ mb: 1 }}>
             Welcome back
           </Typography>
