@@ -1,6 +1,30 @@
 import re
 
 
+SMALL_TALK_RESPONSES: dict[str, tuple[str, str]] = {
+    "greeting": (
+        "GREETING",
+        "Hello. I can help you research pharmacy questions using the uploaded references.",
+    ),
+    "farewell": (
+        "FAREWELL",
+        "You are welcome. Take care, and come back whenever you need pharmacy research support.",
+    ),
+}
+
+
+def detect_small_talk(question: str) -> tuple[str, str] | None:
+    normalized = re.sub(r"[^a-z\s]", "", question.lower()).strip()
+    normalized = re.sub(r"\s+", " ", normalized)
+    greeting_patterns = ("hi", "hello", "hey", "hello there", "hi there", "good morning", "good afternoon", "good evening", "greetings", "how are you")
+    farewell_patterns = ("bye", "bye bye", "goodbye", "see you", "see you later", "good night", "thanks", "thank you", "thank you so much", "thx", "appreciate it")
+    if normalized in greeting_patterns:
+        return SMALL_TALK_RESPONSES["greeting"]
+    if normalized in farewell_patterns:
+        return SMALL_TALK_RESPONSES["farewell"]
+    return None
+
+
 INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("RENAL_ADJUSTMENT", ("egfr", "creatinine clearance", "renal", "kidney")),
     ("HEPATIC_ADJUSTMENT", ("hepatic", "liver", "cirrhosis", "child-pugh")),

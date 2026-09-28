@@ -12,4 +12,4 @@ data/postgres/*
 !data/postgres/.gitkeep
 data/uploads/*
 !data/uploads/.gitkeep
-
+# apps/web/next-env.d.ts

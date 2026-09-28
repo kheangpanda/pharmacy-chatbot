@@ -16,7 +16,7 @@ from app.schemas.chat import (
     SessionDetail,
     SessionRead,
 )
-from app.services.intent import detect_intent
+from app.services.intent import detect_intent, detect_small_talk
 from app.services.rag import generate_answer, retrieve
 
 
@@ -43,11 +43,12 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
         db.add(session)
         db.flush()
 
-    intent = detect_intent(payload.question)
+    small_talk = detect_small_talk(payload.question)
+    intent = small_talk[0] if small_talk else detect_intent(payload.question)
     db.add(ChatMessage(session_id=session.id, user_id=user.id, role="user", content=payload.question, intent=intent))
     try:
-        evidence = retrieve(db, payload.question)
-        answer = generate_answer(payload.question, intent, evidence, payload.provider)
+        evidence = [] if small_talk else retrieve(db, payload.question)
+        answer = small_talk[1] if small_talk else generate_answer(payload.question, intent, evidence, payload.provider)
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=503, detail="The knowledge service is temporarily unavailable") from exc
