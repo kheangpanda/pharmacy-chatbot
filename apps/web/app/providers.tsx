@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "@/features/auth/AuthProvider";
 
 const theme = createTheme({
   palette: {
@@ -15,26 +16,40 @@ const theme = createTheme({
   },
   shape: { borderRadius: 10 },
   typography: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontFamily:
+      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     h1: { fontWeight: 700, fontSize: "1.75rem" },
     h2: { fontWeight: 700, fontSize: "1.25rem" },
     button: { textTransform: "none", fontWeight: 650 },
   },
   components: {
-    MuiCard: { styleOverrides: { root: { border: "1px solid #DDE7E9", boxShadow: "0 1px 2px rgba(19, 53, 60, .04)" } } },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          border: "1px solid #DDE7E9",
+          boxShadow: "0 1px 2px rgba(19, 53, 60, .04)",
+        },
+      },
+    },
     MuiButton: { defaultProps: { disableElevation: true } },
   },
 });
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 20_000, retry: 1 } } }));
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { staleTime: 20_000, retry: 1 } },
+      }),
+  );
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          {children}
+        </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
-

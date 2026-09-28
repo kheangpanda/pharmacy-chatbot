@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
-from openai import OpenAI
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Document, KnowledgeChunk
 from app.prompts.pharmacy import SYSTEM_PROMPT
-from app.services.ingestion import embed_texts
+from app.schemas.chat import Provider
+from app.services.llm import embed_texts, generate_text
 from app.services.intent import extract_entities
 
 
@@ -54,7 +54,7 @@ def retrieve(db: Session, question: str) -> list[RetrievedChunk]:
     return unique[: settings.retrieval_top_k]
 
 
-def generate_answer(question: str, intent: str, evidence: list[RetrievedChunk]) -> str:
+def generate_answer(question: str, intent: str, evidence: list[RetrievedChunk], provider: Provider | None = None) -> str:
     if not evidence:
         return (
             "## Insufficient evidence in the current knowledge base.\n\n"
@@ -65,16 +65,8 @@ def generate_answer(question: str, intent: str, evidence: list[RetrievedChunk]) 
         f"section {item.chunk.section or 'Not specified'}]\n{item.chunk.content}"
         for index, item in enumerate(evidence, 1)
     )
-    client = OpenAI(api_key=settings.openai_api_key)
-    response = client.chat.completions.create(
-        model=settings.openai_chat_model,
-        temperature=0.1,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": f"Intent: {intent}\nQuestion: {question}\n\nRetrieved evidence:\n{excerpts}",
-            },
-        ],
+    return generate_text(
+        SYSTEM_PROMPT,
+        f"Intent: {intent}\nQuestion: {question}\n\nRetrieved evidence:\n{excerpts}",
+        provider,
     )
-    return response.choices[0].message.content or "Insufficient evidence in the current knowledge base."

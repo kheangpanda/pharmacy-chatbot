@@ -1,4 +1,4 @@
-from app.models.entities import ChatMessage, ChatSession, Document, KnowledgeChunk
+from app.models.entities import ChatMessage, ChatSession, Document, KnowledgeChunk, SystemSetting, User
 
-__all__ = ["Document", "KnowledgeChunk", "ChatSession", "ChatMessage"]
+__all__ = ["User", "Document", "KnowledgeChunk", "ChatSession", "ChatMessage", "SystemSetting"]
 

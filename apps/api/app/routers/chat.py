@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.auth.dependencies import get_current_active_user
 from app.database import get_db
-from app.models import ChatMessage, ChatSession
+from app.models import ChatMessage, ChatSession, User
 from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
@@ -33,20 +34,20 @@ def session_summary(session: ChatSession, count: int = 0) -> SessionRead:
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
-    session = db.get(ChatSession, payload.session_id) if payload.session_id else None
+def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depends(get_current_active_user)) -> ChatResponse:
+    session = db.scalar(select(ChatSession).where(ChatSession.id == payload.session_id, ChatSession.user_id == user.id)) if payload.session_id else None
     if payload.session_id and not session:
         raise HTTPException(status_code=404, detail="Chat session not found")
     if not session:
-        session = ChatSession(title=payload.question[:80])
+        session = ChatSession(user_id=user.id, title=payload.question[:80])
         db.add(session)
         db.flush()
 
     intent = detect_intent(payload.question)
-    db.add(ChatMessage(session_id=session.id, role="user", content=payload.question, intent=intent))
+    db.add(ChatMessage(session_id=session.id, user_id=user.id, role="user", content=payload.question, intent=intent))
     try:
         evidence = retrieve(db, payload.question)
-        answer = generate_answer(payload.question, intent, evidence)
+        answer = generate_answer(payload.question, intent, evidence, payload.provider)
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=503, detail="The knowledge service is temporarily unavailable") from exc
@@ -65,11 +66,13 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
     db.add(
         ChatMessage(
             session_id=session.id,
+            user_id=user.id,
             role="assistant",
             content=answer,
             intent=intent,
             citations=[item.model_dump(mode="json") for item in citations],
             confidence=confidence,
+            retrieved_chunks=len(evidence),
         )
     )
     session.updated_at = func.now()
@@ -86,8 +89,8 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
 
 
 @router.post("/chat/sessions", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
-def create_session(payload: SessionCreate, db: Session = Depends(get_db)) -> SessionRead:
-    session = ChatSession(title=payload.title)
+def create_session(payload: SessionCreate, db: Session = Depends(get_db), user: User = Depends(get_current_active_user)) -> SessionRead:
+    session = ChatSession(user_id=user.id, title=payload.title)
     db.add(session)
     db.commit()
     db.refresh(session)
@@ -95,10 +98,11 @@ def create_session(payload: SessionCreate, db: Session = Depends(get_db)) -> Ses
 
 
 @router.get("/chat/sessions", response_model=list[SessionRead])
-def list_sessions(db: Session = Depends(get_db)) -> list[SessionRead]:
+def list_sessions(db: Session = Depends(get_db), user: User = Depends(get_current_active_user)) -> list[SessionRead]:
     statement = (
         select(ChatSession, func.count(ChatMessage.id))
         .outerjoin(ChatMessage)
+        .where(ChatSession.user_id == user.id)
         .group_by(ChatSession.id)
         .order_by(ChatSession.updated_at.desc())
     )
@@ -106,8 +110,8 @@ def list_sessions(db: Session = Depends(get_db)) -> list[SessionRead]:
 
 
 @router.get("/chat/sessions/{session_id}", response_model=SessionDetail)
-def get_session(session_id: uuid.UUID, db: Session = Depends(get_db)) -> SessionDetail:
-    session = db.scalar(select(ChatSession).options(selectinload(ChatSession.messages)).where(ChatSession.id == session_id))
+def get_session(session_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_active_user)) -> SessionDetail:
+    session = db.scalar(select(ChatSession).options(selectinload(ChatSession.messages)).where(ChatSession.id == session_id, ChatSession.user_id == user.id))
     if not session:
         raise HTTPException(status_code=404, detail="Chat session not found")
     messages = [
@@ -126,8 +130,8 @@ def get_session(session_id: uuid.UUID, db: Session = Depends(get_db)) -> Session
 
 
 @router.delete("/chat/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_session(session_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
-    session = db.get(ChatSession, session_id)
+def delete_session(session_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_active_user)) -> None:
+    session = db.scalar(select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == user.id))
     if not session:
         raise HTTPException(status_code=404, detail="Chat session not found")
     db.delete(session)

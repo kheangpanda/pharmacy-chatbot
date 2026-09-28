@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 Confidence = Literal["high", "medium", "low", "insufficient_evidence"]
+Provider = Literal["openai", "gemini"]
 
 
 class Citation(BaseModel):
@@ -19,6 +20,7 @@ class Citation(BaseModel):
 class ChatRequest(BaseModel):
     question: str = Field(min_length=2, max_length=4000)
     session_id: uuid.UUID | None = None
+    provider: Provider | None = None
 
 
 class ChatResponse(BaseModel):

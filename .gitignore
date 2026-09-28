@@ -8,4 +8,8 @@ node_modules/
 .next/
 apps/api/uploads/*.pdf
 !apps/api/uploads/.gitkeep
+data/postgres/*
+!data/postgres/.gitkeep
+data/uploads/*
+!data/uploads/.gitkeep
 

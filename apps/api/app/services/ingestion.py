@@ -3,11 +3,11 @@ from pathlib import Path
 
 import fitz
 import tiktoken
-from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Document, KnowledgeChunk
+from app.services.llm import embed_texts
 
 
 def clean_text(value: str) -> str:
@@ -57,17 +57,6 @@ def split_text(text: str, target_tokens: int = 650, overlap_tokens: int = 100) -
 def infer_section(text: str) -> str | None:
     first = next((line.strip() for line in text.splitlines() if line.strip()), "")
     return first[:500] if 2 <= len(first.split()) <= 14 else None
-
-
-def embed_texts(texts: list[str]) -> list[list[float]]:
-    if not settings.openai_api_key:
-        raise RuntimeError("OPENAI_API_KEY is required to generate document embeddings")
-    client = OpenAI(api_key=settings.openai_api_key)
-    result: list[list[float]] = []
-    for start in range(0, len(texts), 64):
-        response = client.embeddings.create(model=settings.openai_embedding_model, input=texts[start : start + 64])
-        result.extend(item.embedding for item in response.data)
-    return result
 
 
 def ingest_pdf(db: Session, document: Document, path: Path) -> Document:
